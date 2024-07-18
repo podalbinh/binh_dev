@@ -1,5 +1,13 @@
 package com.example.bookmanagement.controllers;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +39,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable Long id) {
+    public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable Long id) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         TransactionResponse transaction = transactionService.get(id);
         return ResponseEntity.ok(transaction);
     }
@@ -43,9 +51,8 @@ public class TransactionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Void> updateTransaction(@PathVariable Long id, @RequestBody TransactionRequest transactionRequest) throws Exception {
-        transactionService.update(id, transactionRequest);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<TransactionResponse> updateTransaction(@PathVariable Long id, @RequestBody TransactionRequest transactionRequest) throws Exception {
+        return ResponseEntity.ok( transactionService.update(id, transactionRequest));
     }
 
     @DeleteMapping("/{id}")

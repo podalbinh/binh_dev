@@ -9,7 +9,7 @@ public class TransactionRequest {
     private Long id;
     private String transactionId;
     private String account;
-    private String inDebt;
-    private String have;
-    private String time;
+    private Double inDebt;
+    private Double have;
+    private Date time;
 }

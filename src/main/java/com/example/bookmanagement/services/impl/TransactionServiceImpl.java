@@ -1,10 +1,17 @@
 package com.example.bookmanagement.services.impl;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import org.apache.tomcat.util.json.ParseException;
 import org.modelmapper.ModelMapper;
@@ -32,98 +39,80 @@ public class TransactionServiceImpl implements ITransactionService {
     private final ModelMapper modelMapper;
     private final RSAUtil rsaUtil;
 
-    public TransactionServiceImpl(ITransactionRepository transactionRepository, ModelMapper modelMapper,RSAUtil rsaUtil) {
+    public TransactionServiceImpl(ITransactionRepository transactionRepository, ModelMapper modelMapper, RSAUtil rsaUtil) {
         this.transactionRepository = transactionRepository;
         this.modelMapper = modelMapper;
-        this.rsaUtil=rsaUtil;
+        this.rsaUtil = rsaUtil;
     }
 
-    /**
-     * Retrieve all transactions with pagination.
-     *
-    //  * @param pageable pagination information
-     * @return a page of transactionResponse objects
-     */
     @Override
     public Page<TransactionResponse> findAll(Pageable pageable) {
         Page<Transaction> transactions = transactionRepository.findAll(pageable);
-        return transactions.map(transaction -> modelMapper.map(transaction, TransactionResponse.class));
+        return transactions.map(transaction -> {
+            TransactionResponse response = modelMapper.map(transaction, TransactionResponse.class);
+            return response;
+        });
     }
 
-    /**
-     * Retrieve an transaction by ID.
-     *
-     * @param id the ID of the transaction to retrieve
-     * @return the transactionResponse object corresponding to the ID
-     * @throws IllegalArgumentException if no transaction is found with the given ID
-     */
     @Override
-    public TransactionResponse get(Long id) {
-        if(id==null){
-            throw new IllegalArgumentException("Id not must be null");
+    public TransactionResponse get(Long id) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+        if (id == null) {
+            throw new IllegalArgumentException("Id must not be null");
         }
-        Optional<Transaction> transaction = transactionRepository.findById(null);
+        Optional<Transaction> transaction = transactionRepository.findById(id);
         if (transaction.isPresent()) {
-            return modelMapper.map(transaction.get(), TransactionResponse.class);
+            TransactionResponse response = modelMapper.map(transaction.get(), TransactionResponse.class);
+            response.setTransactionId(rsaUtil.decrypt(response.getTransactionId()));
+            response.setAccount(rsaUtil.decrypt(response.getAccount()));
+            // Decrypt other fields if needed
+            return response;
         } else {
-            throw new ResourceNotFoundException(Translator.toLocale(MessagesConstants.TRANSACTION_NOT_FOUND_ERROR)+id);
+            throw new ResourceNotFoundException(Translator.toLocale(MessagesConstants.TRANSACTION_NOT_FOUND_ERROR) + id);
         }
     }
 
-    /**
-     * Create a new transaction.
-     *
-     * @param transactionRequest the transactionRequest object containing transaction information
-     * @return the ID of the created transaction
-     */
     @Override
     @Transactional
-    public Long create(TransactionRequest transactionRequest) {
-        Transaction transaction = modelMapper.map(transactionRequest, Transaction.class);
-        Transaction savedtransaction = transactionRepository.save(transaction);
-        return savedtransaction.getId();
+    public Long create(TransactionRequest transactionRequest) throws Exception {
+        TransactionRequest encryptedRequest = encryptTransactionRequest(transactionRequest);
+        Transaction transaction = modelMapper.map(encryptedRequest, Transaction.class);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        return savedTransaction.getId();
     }
 
-    /**
-     * Update an existing transaction.
-     *
-     * @param id            the ID of the transaction to update
-     * @param transactionRequest the transactionRequest object containing updated transaction information
-     * @throws IllegalArgumentException if no transaction is found with the given ID
-     */
     @Override
     @Transactional
-    public void update(Long id, TransactionRequest transactionRequest) {
-        if(id==null){
-            throw new IllegalArgumentException("Id not must be null");
+    public TransactionResponse update(Long id, TransactionRequest transactionRequest) throws Exception {
+        if (id == null) {
+            throw new IllegalArgumentException("Id must not be null");
         }
-        Optional<Transaction> existingtransaction = transactionRepository.findById(id);
-        if (existingtransaction.isPresent()) {
-            Transaction transaction = existingtransaction.get();
-            modelMapper.map(transactionRequest, transaction);
+        TransactionRequest encryptedRequest = encryptTransactionRequest(transactionRequest);
+
+        Optional<Transaction> existingTransaction = transactionRepository.findById(id);
+        if (existingTransaction.isPresent()) {
+            Transaction transaction = existingTransaction.get();
+            modelMapper.map(encryptedRequest, transaction);
             transactionRepository.save(transaction);
+            TransactionResponse response = modelMapper.map(transaction, TransactionResponse.class);
+            response.setTransactionId(rsaUtil.decrypt(response.getTransactionId()));
+            response.setAccount(rsaUtil.decrypt(response.getAccount()));
+            return response;
         } else {
-            throw new ResourceNotFoundException(Translator.toLocale(MessagesConstants.TRANSACTION_NOT_FOUND_ERROR)+id);
+            throw new ResourceNotFoundException(Translator.toLocale(MessagesConstants.TRANSACTION_NOT_FOUND_ERROR) + id);
         }
     }
 
-    /**
-     * Delete an transaction by ID.
-     *
-     * @param id the ID of the transaction to delete
-     * @throws IllegalArgumentException if no transaction is found with the given ID
-     */
     @Override
     @Transactional
     public void delete(Long id) {
-        if(id==null){
-            throw new IllegalArgumentException("Id not must be null");
+        if (id == null) {
+            throw new IllegalArgumentException("Id must not be null");
         }
-        Optional<Transaction> existingtransaction = transactionRepository.findById(id);
-        if (existingtransaction.isPresent()) {
-            transactionRepository.delete(existingtransaction.get());
+        Optional<Transaction> existingTransaction = transactionRepository.findById(id);
+        if (existingTransaction.isPresent()) {
+            transactionRepository.delete(existingTransaction.get());
         } else {
-            throw new ResourceNotFoundException(Translator.toLocale(MessagesConstants.TRANSACTION_NOT_FOUND_ERROR)+id);
+            throw new ResourceNotFoundException(Translator.toLocale(MessagesConstants.TRANSACTION_NOT_FOUND_ERROR) + id);
         }
     }
 
@@ -131,19 +120,12 @@ public class TransactionServiceImpl implements ITransactionService {
         TransactionRequest encryptedRequest = new TransactionRequest();
         encryptedRequest.setTransactionId(rsaUtil.encrypt(request.getTransactionId()));
         encryptedRequest.setAccount(rsaUtil.encrypt(request.getAccount()));
-        encryptedRequest.setInDebt(rsaUtil.encrypt(request.getInDebt()));
-        encryptedRequest.setHave(rsaUtil.encrypt(request.getHave()));
-        encryptedRequest.setTime(rsaUtil.encrypt(request.getTime()));
-
         return encryptedRequest;
     }
 
     public TransactionRequest decryptTransactionRequest(TransactionRequest encryptedRequest) throws Exception {
         encryptedRequest.setTransactionId(rsaUtil.decrypt(encryptedRequest.getTransactionId()));
         encryptedRequest.setAccount(rsaUtil.decrypt(encryptedRequest.getAccount()));
-        encryptedRequest.setInDebt(rsaUtil.decrypt(encryptedRequest.getInDebt()));
-        encryptedRequest.setHave(rsaUtil.decrypt(encryptedRequest.getHave()));
-        encryptedRequest.setTime(rsaUtil.decrypt(encryptedRequest.getTime()));
         return encryptedRequest;
     }
 }
