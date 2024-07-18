@@ -11,41 +11,41 @@ import com.example.bookmanagement.dto.response.TransactionResponse;
 public interface ITransactionService {
 
     /**
-     * Retrieve all authors with pagination.
+     * Retrieve all transactions with pagination.
      *
      * @param pageable pagination information
-     * @return a page of author responses
+     * @return a page of transaction responses
      */
     public Page<TransactionResponse> findAll(Pageable pageable);
 
     /**
-     * Retrieve an author by ID.
+     * Retrieve an transaction by ID.
      *
-     * @param id the ID of the author to retrieve
-     * @return the author response
+     * @param id the ID of the transaction to retrieve
+     * @return the transaction response
      */
     public TransactionResponse get(final Long id);
 
     /**
-     * Create a new author.
+     * Create a new transaction.
      *
-     * @param authorRequest the request object containing author details
-     * @return the ID of the created author
+     * @param transactionRequest the request object containing transaction details
+     * @return the ID of the created transaction
      */
-    public Long create(final TransactionRequest authorRequest);
+    public Long create(final TransactionRequest transactionRequest);
 
     /**
-     * Update an existing author.
+     * Update an existing transaction.
      *
-     * @param id the ID of the author to update
-     * @param authorRequest the request object containing updated author details
+     * @param id the ID of the transaction to update
+     * @param transactionRequest the request object containing updated transaction details
      */
-    public void update(final Long id, final TransactionRequest authorRequest);
+    public void update(final Long id, final TransactionRequest transactionRequest);
 
     /**
-     * Delete an author by ID.
+     * Delete an transaction by ID.
      *
-     * @param id the ID of the author to delete
+     * @param id the ID of the transaction to delete
      */
     public void delete(final Long id);
 }

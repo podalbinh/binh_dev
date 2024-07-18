@@ -38,7 +38,6 @@ public class TransactionServiceImpl implements ITransactionService {
         this.rsaUtil=rsaUtil;
     }
 
-
     /**
      * Retrieve all transactions with pagination.
      *
@@ -60,6 +59,9 @@ public class TransactionServiceImpl implements ITransactionService {
      */
     @Override
     public TransactionResponse get(Long id) {
+        if(id==null){
+            throw new IllegalArgumentException("Id not must be null");
+        }
         Optional<Transaction> transaction = transactionRepository.findById(null);
         if (transaction.isPresent()) {
             return modelMapper.map(transaction.get(), TransactionResponse.class);
@@ -92,6 +94,9 @@ public class TransactionServiceImpl implements ITransactionService {
     @Override
     @Transactional
     public void update(Long id, TransactionRequest transactionRequest) {
+        if(id==null){
+            throw new IllegalArgumentException("Id not must be null");
+        }
         Optional<Transaction> existingtransaction = transactionRepository.findById(id);
         if (existingtransaction.isPresent()) {
             Transaction transaction = existingtransaction.get();
@@ -111,6 +116,9 @@ public class TransactionServiceImpl implements ITransactionService {
     @Override
     @Transactional
     public void delete(Long id) {
+        if(id==null){
+            throw new IllegalArgumentException("Id not must be null");
+        }
         Optional<Transaction> existingtransaction = transactionRepository.findById(id);
         if (existingtransaction.isPresent()) {
             transactionRepository.delete(existingtransaction.get());
@@ -119,41 +127,23 @@ public class TransactionServiceImpl implements ITransactionService {
         }
     }
 
-
     public TransactionRequest encryptTransactionRequest(TransactionRequest request) throws Exception {
         TransactionRequest encryptedRequest = new TransactionRequest();
-        encryptedRequest.setId(request.getId()); // Copy non-sensitive fields directly
-
-        // Encrypt sensitive fields
         encryptedRequest.setTransactionId(rsaUtil.encrypt(request.getTransactionId()));
         encryptedRequest.setAccount(rsaUtil.encrypt(request.getAccount()));
-        encryptedRequest.setInDebt(rsaUtil.encrypt(request.getInDebt().toString()));
-        encryptedRequest.setHave(rsaUtil.encrypt(request.getHave().toString()));
-        encryptedRequest.setTime(rsaUtil.encrypt(dateToString(request.getTime())));
+        encryptedRequest.setInDebt(rsaUtil.encrypt(request.getInDebt()));
+        encryptedRequest.setHave(rsaUtil.encrypt(request.getHave()));
+        encryptedRequest.setTime(rsaUtil.encrypt(request.getTime()));
 
         return encryptedRequest;
     }
 
     public TransactionRequest decryptTransactionRequest(TransactionRequest encryptedRequest) throws Exception {
-        // Decrypt sensitive fields
         encryptedRequest.setTransactionId(rsaUtil.decrypt(encryptedRequest.getTransactionId()));
         encryptedRequest.setAccount(rsaUtil.decrypt(encryptedRequest.getAccount()));
-        encryptedRequest.setInDebt(Double.parseDouble(rsaUtil.decrypt(encryptedRequest.getInDebt())));
-        encryptedRequest.setHave(Double.parseDouble(rsaUtil.decrypt(encryptedRequest.getHave())));
-        encryptedRequest.setTime(stringToDate(rsaUtil.decrypt(encryptedRequest.getTime())));
-
+        encryptedRequest.setInDebt(rsaUtil.decrypt(encryptedRequest.getInDebt()));
+        encryptedRequest.setHave(rsaUtil.decrypt(encryptedRequest.getHave()));
+        encryptedRequest.setTime(rsaUtil.decrypt(encryptedRequest.getTime()));
         return encryptedRequest;
-    }
-
-    // Utility method to convert Date to String
-    private String dateToString(Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return dateFormat.format(date);
-    }
-
-    // Utility method to convert String to Date
-    private Date stringToDate(String dateString) throws ParseException, java.text.ParseException {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        return dateFormat.parse(dateString);
     }
 }
