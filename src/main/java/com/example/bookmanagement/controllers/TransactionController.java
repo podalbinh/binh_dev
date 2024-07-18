@@ -19,11 +19,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.example.bookmanagement.dto.request.TransactionRequest;
 import com.example.bookmanagement.dto.response.TransactionResponse;
 import com.example.bookmanagement.services.impl.TransactionServiceImpl;
 
+@RequestMapping("/transactions")
 public class TransactionController {
       private final TransactionServiceImpl transactionService;
 
